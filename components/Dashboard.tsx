@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from 'react';
-import type { Listing, Settings } from '../types';
+import type { Listing, Settings, SearchProgress } from '../types';
 import ListingCard from './ListingCard';
 import ListingRow from './ListingRow';
 import ListingDetailModal from './ListingDetailModal';
@@ -7,6 +7,7 @@ import FilterBar from './FilterBar';
 import AddListingsModal from './AddManualModal';
 import { PlusIcon, FilterIcon, GridIcon, ListIcon, SparklesIcon } from './common/Icons';
 import Button from './common/Button';
+import SearchProgressModal from './SearchModal';
 
 interface DashboardProps {
   listings: Listing[];
@@ -20,7 +21,13 @@ const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, 
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [isSearching, setIsSearching] = useState(false);
+  const [searchProgress, setSearchProgress] = useState<SearchProgress>({
+    open: false,
+    message: '',
+    status: 'searching',
+    summary: null,
+    sites: [],
+  });
   const [filters, setFilters] = useState({
     search: '',
     amenities: [] as string[],
@@ -41,15 +48,33 @@ const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, 
   const handleSearch = async () => {
     if (!settings.apiKey || !settings.apiKey.trim()) {
       addActivity("Error: API Key de Gemini no configurada. Por favor, añádela en Configuración.");
+      setSearchProgress({
+          open: true,
+          status: 'error',
+          message: 'API Key no configurada',
+          summary: 'Por favor, añade tu API Key de Gemini en la pantalla de Configuración para poder investigar.',
+      });
       return;
     }
     if (!settings.sites || settings.sites.length === 0) {
       addActivity("Error: No hay sitios para investigar. Añádelos en la pantalla de Configuración.");
+      setSearchProgress({
+          open: true,
+          status: 'error',
+          message: 'No hay sitios para investigar',
+          summary: 'Por favor, añade al menos un sitio web en la pantalla de Configuración.',
+      });
       return;
     }
 
-    setIsSearching(true);
     addActivity(`Iniciando investigación en ${settings.sites.length} sitios...`);
+    setSearchProgress({
+        open: true,
+        status: 'searching',
+        message: `Investigando en ${settings.sites.length} sitios... Esto puede tardar unos minutos.`,
+        summary: null,
+        sites: settings.sites,
+    });
 
     try {
         const response = await fetch('http://localhost:5001/api/search', {
@@ -112,12 +137,23 @@ const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, 
         const finalListings = [...updatedListings, ...newFoundListings];
         setListings(finalListings);
         addActivity(`Investigación completada: ${newFoundListings.length} nuevos anuncios encontrados, ${updatedItemsCount} actualizados.`);
+        
+        setSearchProgress({
+            open: true,
+            status: 'done',
+            message: '¡Investigación completada!',
+            summary: { new: newFoundListings.length, updated: updatedItemsCount },
+        });
 
     } catch (err) {
       const errorMessage = err instanceof Error ? err.message : "Ocurrió un error inesperado. Asegúrate de que el servidor backend esté corriendo.";
       addActivity(`Error en investigación: ${errorMessage}`);
-    } finally {
-        setIsSearching(false);
+       setSearchProgress({
+          open: true,
+          status: 'error',
+          message: 'Error en la investigación',
+          summary: errorMessage,
+      });
     }
   };
 
@@ -134,6 +170,8 @@ const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, 
     });
     return filtered.sort((a, b) => b.score - a.score);
   }, [listings, filters]);
+  
+  const isSearching = searchProgress.status === 'searching' && searchProgress.open;
 
   return (
     <div>
@@ -207,6 +245,11 @@ const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, 
           addActivity={addActivity}
         />
       )}
+
+      <SearchProgressModal 
+        progress={searchProgress} 
+        onClose={() => setSearchProgress(prev => ({ ...prev, open: false }))} 
+      />
     </div>
   );
 };

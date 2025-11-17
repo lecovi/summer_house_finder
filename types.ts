@@ -48,3 +48,11 @@ export interface ActivityLog {
 }
 
 export type View = 'dashboard' | 'settings' | 'activity';
+
+export interface SearchProgress {
+  open: boolean;
+  message: string;
+  status: 'searching' | 'done' | 'error';
+  summary: { new: number; updated: number } | string | null;
+  sites?: string[];
+}
