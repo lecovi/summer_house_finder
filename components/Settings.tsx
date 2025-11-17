@@ -1,7 +1,7 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect } from 'react';
 import type { Settings } from '../types';
 import Button from './common/Button';
-import { TrashIcon, PlusIcon, EyeIcon, EyeOffIcon } from './common/Icons';
+import { EyeIcon, EyeOffIcon, TrashIcon, PlusIcon } from './common/Icons';
 
 interface SettingsProps {
   settings: Settings;
@@ -12,9 +12,8 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, setSettings }) =
   const [localSettings, setLocalSettings] = useState<Settings>(settings);
   const [hasChanges, setHasChanges] = useState(false);
   const [showSuccess, setShowSuccess] = useState(false);
-  const [newSite, setNewSite] = useState('');
   const [showApiKey, setShowApiKey] = useState(false);
-  const newSiteInputRef = useRef<HTMLInputElement>(null);
+  const [newSite, setNewSite] = useState('');
 
   useEffect(() => {
     setLocalSettings(settings);
@@ -37,17 +36,24 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, setSettings }) =
 
   const handleAddSite = () => {
     if (newSite && !localSettings.sites.includes(newSite)) {
-      setLocalSettings(prev => ({ ...prev, sites: [...prev.sites, newSite.trim()] }));
-      setHasChanges(true);
-      setNewSite('');
-      newSiteInputRef.current?.focus();
+        try {
+            new URL(newSite); // Validate URL format
+            setLocalSettings(prev => ({
+                ...prev,
+                sites: [...prev.sites, newSite.trim()]
+            }));
+            setNewSite('');
+            setHasChanges(true);
+        } catch (_) {
+            alert("Por favor, introduce una URL válida.");
+        }
     }
   };
 
   const handleRemoveSite = (siteToRemove: string) => {
     setLocalSettings(prev => ({
-      ...prev,
-      sites: prev.sites.filter(site => site !== siteToRemove),
+        ...prev,
+        sites: prev.sites.filter(site => site !== siteToRemove)
     }));
     setHasChanges(true);
   };
@@ -94,6 +100,39 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, setSettings }) =
         </div>
         
         <div>
+            <h3 className="text-lg font-medium text-on-surface-variant mb-3">Sitios a Consultar</h3>
+            <div className="flex gap-2">
+                <input
+                    type="url"
+                    value={newSite}
+                    onChange={(e) => setNewSite(e.target.value)}
+                    onKeyDown={(e) => e.key === 'Enter' && (e.preventDefault(), handleAddSite())}
+                    placeholder="https://ejemplo.com/listados"
+                    className="flex-grow p-3 bg-surface text-on-surface rounded-lg focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                <Button type="button" onClick={handleAddSite} variant="tonal" className="px-4">
+                    <PlusIcon className="w-5 h-5"/>
+                    <span className="hidden sm:inline ml-2">Agregar</span>
+                </Button>
+            </div>
+            <div className="mt-3 space-y-2">
+                {localSettings.sites.map(site => (
+                    <div key={site} className="flex items-center justify-between bg-surface p-2 rounded-md">
+                        <span className="text-on-surface-variant text-sm truncate pr-2">{site}</span>
+                        <button
+                            type="button"
+                            onClick={() => handleRemoveSite(site)}
+                            className="text-on-surface-variant hover:text-error transition-colors p-1 rounded-full"
+                            title="Quitar sitio"
+                        >
+                            <TrashIcon className="w-4 h-4" />
+                        </button>
+                    </div>
+                ))}
+            </div>
+        </div>
+
+        <div>
           <h3 className="text-lg font-medium text-on-surface-variant mb-4">Ponderación de Puntuación</h3>
           <div className="space-y-4">
             {Object.entries(localSettings.weights).map(([key, value]) => (
@@ -130,42 +169,6 @@ const SettingsComponent: React.FC<SettingsProps> = ({ settings, setSettings }) =
              <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-outline group-focus-within:bg-primary transition-colors duration-200"></div>
           </div>
         </div>
-
-        <div>
-          <h3 className="text-lg font-medium text-on-surface-variant mb-3">Sitios a Consultar</h3>
-          <div className="space-y-2">
-            {localSettings.sites?.map(site => (
-              <div key={site} className="flex items-center justify-between bg-surface p-3 rounded-lg">
-                <span className="text-on-surface">{site}</span>
-                <button
-                  type="button"
-                  onClick={() => handleRemoveSite(site)}
-                  className="p-1.5 rounded-full text-on-surface-variant hover:bg-error-container hover:text-on-error-container"
-                  title={`Eliminar ${site}`}
-                >
-                  <TrashIcon className="w-4 h-4" />
-                </button>
-              </div>
-            ))}
-          </div>
-          <div className="flex gap-2 mt-3">
-            <div className="relative flex-grow bg-surface rounded-lg">
-                <input
-                    ref={newSiteInputRef}
-                    type="url"
-                    value={newSite}
-                    onChange={(e) => setNewSite(e.target.value)}
-                    onKeyDown={(e) => { if(e.key === 'Enter') { e.preventDefault(); handleAddSite(); } }}
-                    placeholder="www.ejemplo.com"
-                    className="w-full p-3 bg-transparent text-on-surface focus:outline-none"
-                />
-            </div>
-            <Button type="button" onClick={handleAddSite} variant="tonal" className="px-4">
-              <PlusIcon />
-            </Button>
-          </div>
-        </div>
-
 
         <div className="flex items-center gap-4 pt-4">
           <Button type="submit" disabled={!hasChanges}>

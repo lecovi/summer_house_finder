@@ -37,8 +37,8 @@ export interface Weights {
 export interface Settings {
   weights: Weights;
   prompt: string;
-  sites: string[];
   apiKey: string;
+  sites: string[];
 }
 
 export interface ActivityLog {

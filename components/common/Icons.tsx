@@ -192,3 +192,15 @@ export const EyeOffIcon: React.FC<{ className?: string }> = ({ className = "w-5 
         <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 21l-18-18M9.536 9.536A4.505 4.505 0 0112 9c1.32 0 2.5.558 3.354 1.464m2.106 2.106A10.005 10.005 0 0121.542 12c-1.274 4.057-5.064 7-9.542 7a10.005 10.005 0 01-1.464-.106" />
     </svg>
 );
+
+export const CodeBracketIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M17.25 6.75 22.5 12l-5.25 5.25m-10.5 0L1.5 12l5.25-5.25m7.5-3-4.5 16.5" />
+    </svg>
+);
+
+export const DocumentTextIcon: React.FC<{ className?: string }> = ({ className = "w-5 h-5" }) => (
+    <svg xmlns="http://www.w3.org/2000/svg" className={className} fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
+        <path strokeLinecap="round" strokeLinejoin="round" d="M19.5 14.25v-2.625a3.375 3.375 0 0 0-3.375-3.375h-1.5A1.125 1.125 0 0 1 13.5 7.125v-1.5a3.375 3.375 0 0 0-3.375-3.375H8.25m2.25 0H5.625c-.621 0-1.125.504-1.125 1.125v17.25c0 .621.504 1.125 1.125 1.125h12.75c.621 0 1.125-.504 1.125-1.125V11.25a9 9 0 0 0-9-9Z" />
+    </svg>
+);

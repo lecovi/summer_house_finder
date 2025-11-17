@@ -25,12 +25,11 @@ export const DEFAULT_SETTINGS: Settings = {
     proximity: 25,
   },
   prompt: DEFAULT_PROMPT,
-  sites: [
-    'www.mercadolibre.com.ar',
-    'www.zonaprop.com.ar',
-    'www.airbnb.com.ar',
-  ],
   apiKey: '',
+  sites: [
+    'https://inmuebles.mercadolibre.com.ar/quintas/alquiler/temporal/bsas-gba-norte/',
+    'https://www.zonaprop.com.ar/quintas-alquiler-temporal-gba-norte.html',
+  ],
 };
 
 export const COMMON_AMENITIES = ['pileta', 'parrilla', 'asador', 'cancha de pádel', 'wifi', 'aire acondicionado', 'metegol', 'ping pong', 'quincho', 'parque', 'cancha de futbol', 'hogar a leña'];

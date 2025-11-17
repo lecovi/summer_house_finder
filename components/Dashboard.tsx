@@ -1,13 +1,11 @@
 import React, { useState, useMemo } from 'react';
 import type { Listing, Settings } from '../types';
-import { processScrapedData } from '../services/geminiService';
-import { MOCK_SCRAPED_DATA } from '../constants';
 import ListingCard from './ListingCard';
 import ListingRow from './ListingRow';
 import ListingDetailModal from './ListingDetailModal';
 import FilterBar from './FilterBar';
-import AddManualModal from './AddManualModal';
-import { PlusIcon, FilterIcon, SparklesIcon, GridIcon, ListIcon } from './common/Icons';
+import AddListingsModal from './AddManualModal';
+import { PlusIcon, FilterIcon, GridIcon, ListIcon, SparklesIcon } from './common/Icons';
 import Button from './common/Button';
 
 interface DashboardProps {
@@ -19,84 +17,16 @@ interface DashboardProps {
 
 const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, addActivity }) => {
   const [isAddModalOpen, setAddModalOpen] = useState(false);
-  const [isSearching, setIsSearching] = useState(false);
   const [selectedListing, setSelectedListing] = useState<Listing | null>(null);
   const [showFilters, setShowFilters] = useState(false);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
+  const [isSearching, setIsSearching] = useState(false);
   const [filters, setFilters] = useState({
     search: '',
     amenities: [] as string[],
     maxProximity: 120,
     minCapacity: 8,
   });
-
-  const handleSearch = async () => {
-    if (!settings.apiKey || !settings.apiKey.trim()) {
-      addActivity("Error: API Key de Gemini no configurada. Ve a Configuración para añadirla antes de investigar.");
-      return;
-    }
-    
-    setIsSearching(true);
-    addActivity("Iniciando investigación de anuncios...");
-    try {
-      const processedData = await processScrapedData(MOCK_SCRAPED_DATA, settings.prompt, settings.apiKey);
-      
-      const updatedListings = [...listings].map(l => ({...l, isNew: false})); // Mark old ones as not new
-      const newFoundListings: Listing[] = [];
-      let updatedItemsCount = 0;
-
-      for (const item of processedData) {
-        const existingIndex = updatedListings.findIndex(l => 
-            l.sources.some(s => item.sources.some(newItemSource => s.url === newItemSource.url))
-        );
-
-        if (existingIndex > -1) {
-            const existingListing = updatedListings[existingIndex];
-            const priceChanged = existingListing.price !== item.price;
-            
-            if (priceChanged) {
-                const existingUrls = new Set(existingListing.sources.map(s => s.url));
-                const newSources = item.sources.filter(s => !existingUrls.has(s.url));
-                
-                updatedListings[existingIndex] = {
-                    ...existingListing,
-                    ...item,
-                    sources: [...existingListing.sources, ...newSources],
-                    isNew: true, // Mark as new if price changed
-                    comments: existingListing.comments,
-                };
-                addActivity(`Anuncio actualizado: "${existingListing.name}". El precio cambió a $${item.price.toLocaleString('es-AR')}.`);
-                updatedItemsCount++;
-            }
-        } else {
-            const isDuplicateByName = updatedListings.some(l => l.name.toLowerCase() === item.name.toLowerCase() && l.location.toLowerCase() === item.location.toLowerCase());
-            if (!isDuplicateByName) {
-                const newListing: Listing = {
-                    ...item,
-                    id: `listing-${Date.now()}-${Math.random()}`,
-                    comments: [], score: 0,
-                    scores: { price: 0, comfort: 0, proximity: 0 },
-                    isNew: true,
-                };
-                newFoundListings.push(newListing);
-                addActivity(`Nuevo anuncio encontrado: "${newListing.name}".`);
-            }
-        }
-      }
-
-      const finalListings = [...updatedListings, ...newFoundListings];
-      setListings(finalListings);
-
-      addActivity(`Investigación completada: ${newFoundListings.length} nuevos, ${updatedItemsCount} actualizados.`);
-
-    } catch (error) {
-      console.error("Search failed:", error);
-      const errorMessage = error instanceof Error ? error.message : "Error durante la investigación de anuncios.";
-      addActivity(errorMessage);
-    } finally {
-      setIsSearching(false);
-    }
-  };
   
   const handleUpdateListing = (listing: Listing) => {
     const updatedListings = listings.map(l => l.id === listing.id ? listing : l);
@@ -106,6 +36,89 @@ const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, 
   
   const handleSelectListing = (listing: Listing) => {
       setSelectedListing(listing);
+  };
+
+  const handleSearch = async () => {
+    if (!settings.apiKey || !settings.apiKey.trim()) {
+      addActivity("Error: API Key de Gemini no configurada. Por favor, añádela en Configuración.");
+      return;
+    }
+    if (!settings.sites || settings.sites.length === 0) {
+      addActivity("Error: No hay sitios para investigar. Añádelos en la pantalla de Configuración.");
+      return;
+    }
+
+    setIsSearching(true);
+    addActivity(`Iniciando investigación en ${settings.sites.length} sitios...`);
+
+    try {
+        const response = await fetch('http://localhost:5001/api/search', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                sites: settings.sites,
+                prompt: settings.prompt,
+                apiKey: settings.apiKey,
+            }),
+        });
+
+        if (!response.ok) {
+            const errorData = await response.json();
+            throw new Error(errorData.error || `Error del servidor: ${response.statusText}`);
+        }
+
+        const processedData = await response.json();
+
+        const updatedListings = [...listings].map(l => ({...l, isNew: false})); // Mark old ones as not new
+        const newFoundListings: Listing[] = [];
+        let updatedItemsCount = 0;
+
+        for (const item of processedData) {
+            const existingIndex = updatedListings.findIndex(l => 
+                l.sources.some(s => item.sources.some((newItemSource: any) => s.url === newItemSource.url))
+            );
+
+            if (existingIndex > -1) {
+                const existingListing = updatedListings[existingIndex];
+                const priceChanged = existingListing.price !== item.price;
+                
+                if (priceChanged) {
+                    const existingUrls = new Set(existingListing.sources.map(s => s.url));
+                    const newSources = item.sources.filter((s: any) => !existingUrls.has(s.url));
+                    
+                    updatedListings[existingIndex] = {
+                        ...existingListing, ...item,
+                        sources: [...existingListing.sources, ...newSources],
+                        isNew: true, comments: existingListing.comments,
+                    };
+                    addActivity(`Anuncio actualizado: "${existingListing.name}". El precio cambió a $${item.price.toLocaleString('es-AR')}.`);
+                    updatedItemsCount++;
+                }
+            } else {
+                 const isDuplicateByName = updatedListings.some(l => l.name.toLowerCase() === item.name.toLowerCase() && l.location.toLowerCase() === item.location.toLowerCase());
+                 if (!isDuplicateByName) {
+                    const newListing: Listing = {
+                        ...item, id: `listing-${Date.now()}-${Math.random()}`,
+                        comments: [], score: 0,
+                        scores: { price: 0, comfort: 0, proximity: 0 },
+                        isNew: true,
+                    };
+                    newFoundListings.push(newListing);
+                    addActivity(`Nuevo anuncio encontrado: "${newListing.name}".`);
+                 }
+            }
+        }
+
+        const finalListings = [...updatedListings, ...newFoundListings];
+        setListings(finalListings);
+        addActivity(`Investigación completada: ${newFoundListings.length} nuevos anuncios encontrados, ${updatedItemsCount} actualizados.`);
+
+    } catch (err) {
+      const errorMessage = err instanceof Error ? err.message : "Ocurrió un error inesperado. Asegúrate de que el servidor backend esté corriendo.";
+      addActivity(`Error en investigación: ${errorMessage}`);
+    } finally {
+        setIsSearching(false);
+    }
   };
 
   const filteredAndSortedListings = useMemo(() => {
@@ -127,9 +140,9 @@ const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, 
       <div className="flex flex-col sm:flex-row justify-between items-center mb-6 gap-4">
         <h2 className="text-3xl font-normal text-on-background">Listados de Propiedades</h2>
         <div className="flex items-center gap-2">
-            <Button onClick={handleSearch} variant="filled" className="flex items-center gap-2" disabled={isSearching}>
+            <Button onClick={handleSearch} disabled={isSearching} variant="filled" className="flex items-center gap-2">
                 {isSearching ? <div className="w-5 h-5 border-2 border-on-primary/50 border-t-on-primary rounded-full animate-spin"></div> : <SparklesIcon />}
-                <span>{isSearching ? 'Investigando...' : 'Investigar'}</span>
+                <span className="hidden sm:inline">{isSearching ? 'Investigando...' : 'Investigar'}</span>
             </Button>
             <Button onClick={() => setShowFilters(!showFilters)} variant="tonal" className="flex items-center gap-2">
                 <FilterIcon />
@@ -162,8 +175,8 @@ const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, 
         </div>
       ) : (
         <div className="text-center py-16 px-6 bg-surface-variant rounded-2xl mt-6">
-          <h3 className="text-xl font-semibold text-on-surface">No se encontraron listados.</h3>
-          <p className="text-on-surface-variant mt-2">Intenta ajustar los filtros o investiga nuevos anuncios.</p>
+          <h3 className="text-xl font-semibold text-on-surface">No hay listados para mostrar.</h3>
+          <p className="text-on-surface-variant mt-2">Haz clic en el botón <span className="inline-block align-middle mx-1 p-1 bg-primary text-on-primary rounded-md"><SparklesIcon className="w-4 h-4" /></span> para buscar nuevos anuncios o en <span className="inline-block align-middle mx-1 p-1 bg-primary text-on-primary rounded-md"><PlusIcon className="w-4 h-4" /></span> para agregarlos manualmente.</p>
         </div>
       )}
       
@@ -176,7 +189,7 @@ const Dashboard: React.FC<DashboardProps> = ({ listings, setListings, settings, 
       </button>
 
       {isAddModalOpen && (
-        <AddManualModal
+        <AddListingsModal
             onClose={() => setAddModalOpen(false)}
             currentListings={listings}
             setListings={setListings}

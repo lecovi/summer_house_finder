@@ -1,10 +1,11 @@
 # Finder de Quintas
 
-Una aplicación web para buscar, rastrear y puntuar anuncios de casas de veraneo. Utiliza la API de Gemini para analizar de forma inteligente el contenido HTML extraído de sitios de bienes raíces, extraer información relevante y puntuar los anuncios basándose en criterios personalizables.
+Una aplicación web para buscar, rastrear y puntuar anuncios de casas de veraneo. Utiliza un backend local para realizar scraping en sitios de bienes raíces y luego usa la API de Gemini para analizar de forma inteligente el contenido, extraer información relevante y puntuar los anuncios basándose en criterios personalizables.
 
 ## Características
 
-- **Análisis con IA**: Pega el HTML de cualquier sitio de bienes raíces y Gemini extraerá los detalles de los anuncios.
+- **Búsqueda Automatizada**: Configura una lista de URLs y la aplicación, a través de un backend, buscará nuevos anuncios con un solo clic.
+- **Análisis con IA**: Gemini extrae automáticamente los detalles clave de los anuncios obtenidos.
 - **Puntuación Personalizable**: Ajusta la ponderación de precio, confort y proximidad para encontrar la propiedad perfecta para ti.
 - **Seguimiento de Anuncios**: Guarda, comenta y edita los anuncios para llevar un registro de tus opciones.
 - **Registro de Actividad**: Todas tus acciones se registran en un historial para que puedas ver los cambios recientes.
@@ -12,77 +13,54 @@ Una aplicación web para buscar, rastrear y puntuar anuncios de casas de veraneo
 - **Múltiples Vistas**: Visualiza los anuncios en formato de cuadrícula o de lista.
 - **Filtros Avanzados**: Filtra por palabra clave, comodidades, capacidad y distancia.
 
-## Cómo Probar Localmente
+## Cómo Funciona la Búsqueda (con Backend)
 
-Esta aplicación es un proyecto autocontenido (HTML, CSS, y JS del lado del cliente). No requiere un servidor ni un proceso de compilación.
+La aplicación está diseñada para funcionar con un pequeño servidor backend que se ejecuta en tu máquina local. Este enfoque resuelve las restricciones de seguridad del navegador (CORS) y permite una automatización real.
 
-**Pasos:**
+1.  **Frontend (lo que ves en el navegador)**: Cuando haces clic en el botón **"Investigar"**, la aplicación envía la lista de sitios configurados y tu prompt de IA a tu servidor backend local de Python.
+2.  **Backend (servidor local en Python)**: Este servidor recibe la petición, visita cada una de las URLs para descargar su contenido HTML, lo une todo y se lo envía a la API de Gemini para su análisis.
+3.  **API de Gemini**: Procesa el HTML y devuelve los datos estructurados de los anuncios.
+4.  **Respuesta**: El backend envía los anuncios procesados de vuelta al frontend, que los muestra en tu pantalla.
 
-1.  **Descarga los archivos**: Asegúrate de tener todos los archivos del proyecto (`index.html`, `index.tsx`, `App.tsx`, etc.) en una misma carpeta en tu computadora.
-2.  **Abre `index.html`**: Simplemente abre el archivo `index.html` en tu navegador web preferido (como Google Chrome, Firefox, o Edge).
-3.  **Configura tu API Key**:
+## Cómo Configurar y Ejecutar el Proyecto
+
+Este proyecto tiene dos partes: el frontend (que se ejecuta en el navegador) y el backend (que se ejecuta en tu terminal).
+
+### Parte 1: Configurar el Backend (Python)
+
+Necesitarás [Python 3](https://www.python.org/downloads/) instalado en tu computadora.
+
+1.  **Abre una terminal o línea de comandos**: Navega a la carpeta donde tienes los archivos del proyecto.
+
+2.  **Crea un entorno virtual**: Esto aísla las dependencias del proyecto.
+    ```bash
+    # En macOS o Linux
+    python3 -m venv venv
+    source venv/bin/activate
+
+    # En Windows
+    python -m venv venv
+    .\venv\Scripts\activate
+    ```
+
+3.  **Instala las dependencias**: Con el entorno virtual activado, instala las librerías necesarias desde el archivo `requirements.txt`.
+    ```bash
+    pip install -r requirements.txt
+    ```
+
+4.  **Inicia el servidor**: En tu terminal (con el entorno virtual todavía activado), ejecuta el siguiente comando y mantenlo corriendo mientras usas la aplicación:
+    ```bash
+    python server.py
+    ```
+    Deberías ver un mensaje similar a: `* Running on http://127.0.0.1:5001`.
+
+### Parte 2: Ejecutar el Frontend
+
+1.  **Abre `index.html`**: Con el servidor backend corriendo, simplemente abre el archivo `index.html` en tu navegador web (como Google Chrome, Firefox, o Edge).
+2.  **Configura tu API Key**:
     - Ve a la sección de **Configuración** (icono de engranaje).
     - Pega tu [API Key de Google Gemini](https://aistudio.google.com/app/apikey) en el campo correspondiente. La clave se guardará de forma segura en el almacenamiento local de tu navegador.
+    - En esta misma pantalla, puedes agregar o quitar las URLs de los sitios que quieres investigar.
+    - Guarda los cambios.
 
-¡Y listo! La aplicación ya está funcionando en tu máquina local.
-
-## Cómo Usar el Scraping Manual
-
-La aplicación está diseñada para funcionar con el contenido HTML de páginas web de bienes raíces. Dado que el scraping directo desde el navegador está restringido por razones de seguridad (políticas de CORS), el método de uso es copiar manualmente el HTML de la página de interés.
-
-### Método 1: Usando las Herramientas de Desarrollo de Google Chrome
-
-Este es el método más rápido para una prueba puntual.
-
-1.  **Navega a la página de anuncios**: Ve a un sitio como Mercado Libre, Zonaprop, o Airbnb y realiza una búsqueda que muestre varios anuncios en una página.
-2.  **Abre las Herramientas de Desarrollo**: Presiona `F12` o haz clic derecho en la página y selecciona "Inspeccionar".
-3.  **Copia el HTML**:
-    - En el panel de Herramientas de Desarrollo, ve a la pestaña **"Elements"** (Elementos).
-    - Busca el elemento HTML principal que contiene todos los anuncios. A menudo es `<body>` o `<main>`.
-    - Haz clic derecho sobre ese elemento, selecciona **"Copy"** (Copiar) > **"Copy outerHTML"** (Copiar HTML externo).
-4.  **Usa los datos en la aplicación**:
-    - En el código fuente, abre el archivo `constants.ts`.
-    - Busca la constante `MOCK_SCRAPED_DATA`.
-    - **Reemplaza** el contenido de ejemplo de esa constante con el HTML que acabas de copiar.
-    - Guarda el archivo `constants.ts` y refresca la aplicación en tu navegador.
-    - Haz clic en el botón **"Investigar"** en el Dashboard. La IA procesará el HTML que pegaste y poblará la aplicación con los anuncios encontrados.
-
-### Método 2: Usando Playwright (Más Avanzado)
-
-Si prefieres automatizar la obtención del HTML, puedes usar una herramienta como Playwright.
-
-1.  **Instala Playwright**: Si no tienes Node.js, instálalo primero. Luego, en tu terminal, ejecuta:
-    ```bash
-    npm init -y
-    npm i playwright
-    ```
-2.  **Crea un script de scraping**: Crea un archivo, por ejemplo `scrape.js`, y pega el siguiente código:
-    ```javascript
-    const { chromium } = require('playwright');
-    const fs = require('fs');
-
-    (async () => {
-      const browser = await chromium.launch();
-      const page = await browser.newPage();
-      
-      // Cambia esta URL por la que quieras scrapear
-      await page.goto('https://inmuebles.mercadolibre.com.ar/quintas/alquiler/temporal/');
-      
-      // Espera a que la red esté inactiva para asegurar que todo el contenido se cargue
-      await page.waitForLoadState('networkidle');
-
-      const content = await page.content();
-      
-      // Guarda el contenido en un archivo o imprímelo en la consola
-      fs.writeFileSync('output.html', content);
-      console.log('HTML guardado en output.html');
-      // console.log(content); 
-      
-      await browser.close();
-    })();
-    ```
-3.  **Ejecuta el script**:
-    ```bash
-    node scrape.js
-    ```
-4.  **Usa el resultado**: El contenido HTML completo de la página se guardará en `output.html`. Cópialo y pégalo en la constante `MOCK_SCRAPED_DATA` dentro de `constants.ts` como se describe en el Método 1.
+¡Y listo! Ahora puedes ir al Dashboard y usar el botón **"Investigar"** para buscar anuncios automáticamente.
