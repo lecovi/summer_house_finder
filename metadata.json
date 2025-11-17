@@ -1,0 +1,5 @@
+{
+  "name": "Summer House Finder",
+  "description": "An application to search, track, and score summer house listings. Users can paste scraped data from real estate sites, and the app uses Gemini to parse, score, and manage the listings based on configurable criteria.",
+  "requestFramePermissions": []
+}
